@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🎄 圣诞快乐 · 动态圣诞树</title>
+  <style>
+    /* ============ 基础重置 ============ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background: radial-gradient(ellipse at 50% 18%, #20315e 0%, #121a38 55%, #060a1a 100%);
+      color: #fff;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* ============ 标题 ============ */
+    .title {
+      position: fixed;
+      top: 4vmin;
+      width: 100%;
+      text-align: center;
+      font-size: 7vmin;
+      font-weight: 800;
+      letter-spacing: .08em;
+      background: linear-gradient(180deg, #fff 0%, #ffe9a8 40%, #ffd76e 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 0 18px rgba(255, 214, 110, .45));
+      animation: titleFloat 3s ease-in-out infinite;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .title .sub {
+      display: block;
+      font-size: 3.2vmin;
+      font-weight: 600;
+      letter-spacing: .5em;
+      margin-top: .6vmin;
+      color: #cfe0ff;
+      -webkit-text-fill-color: #cfe0ff;
+    }
+    @keyframes titleFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-1.6vmin); }
+    }
+
+    /* ============ 地面雪堆 ============ */
+    .ground {
+      position: fixed;
+      bottom: -8vmin;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 130vw;
+      height: 18vmin;
+      background: radial-gradient(ellipse at 50% 42%, #eef4ff 0%, #cddcf2 55%, transparent 100%);
+      z-index: 2;
+    }
+
+    /* ============ 圣诞树 ============ */
+    /* 树的每一层都是一个倒三角，从下往上堆叠 */
+    .layer {
+      position: fixed;
+      left: 50vw;
+      transform: translateX(-50%);
+      clip-path: polygon(50% 0%, 2% 100%, 98% 100%);
+      background: linear-gradient(180deg, #39b873 0%, #207d4d 55%, #124f30 100%);
+    }
+    .l1 { bottom: 9vmin;  width: 56vmin; height: 30vmin; }
+    .l2 { bottom: 26vmin; width: 46vmin; height: 28vmin; }
+    .l3 { bottom: 42vmin; width: 36vmin; height: 26vmin; }
+    .l4 { bottom: 58vmin; width: 25vmin; height: 24vmin; }
+
+    /* 树干 */
+    .trunk {
+      position: fixed;
+      left: 50vw;
+      bottom: 2vmin;
+      transform: translateX(-50%);
+      width: 7vmin;
+      height: 9vmin;
+      background: linear-gradient(180deg, #8a5a33, #5c3a1e);
+      border-radius: 0 0 1.2vmin 1.2vmin;
+    }
+
+    /* 树顶星星 */
+    .star {
+      position: fixed;
+      left: 50vw;
+      bottom: 83vmin;
+      transform: translateX(-50%);
+      font-size: 10vmin;
+      line-height: 1;
+      filter: drop-shadow(0 0 16px rgba(255, 215, 0, .9)) drop-shadow(0 0 34px rgba(255, 200, 60, .6));
+      animation: starPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes starPulse {
+      0%, 100% { transform: translateX(-50%) scale(1)   rotate(0deg); }
+      50%      { transform: translateX(-50%) scale(1.18) rotate(12deg); }
+    }
+
+    /* 装饰球（闪烁的小灯） */
+    .ornament {
+      position: fixed;
+      width: 2.4vmin;
+      height: 2.4vmin;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255, 255, 255, .75), 0 0 14px currentColor;
+      animation: blink 1.4s ease-in-out infinite;
+      z-index: 4;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1;    transform: translateX(-50%) scale(1); }
+      50%      { opacity: .3;   transform: translateX(-50%) scale(.8); }
+    }
+
+    /* ============ 背景星星 ============ */
+    .bgstar {
+      position: fixed;
+      width: .5vmin;
+      height: .5vmin;
+      border-radius: 50%;
+      background: #fff;
+      opacity: .8;
+      animation: twinkle 2.4s ease-in-out infinite;
+      z-index: 1;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: .15; }
+      50%      { opacity: .9; }
+    }
+
+    /* ============ 雪花 ============ */
+    .snow {
+      position: fixed;
+      top: -6vh;
+      width: 1vmin;
+      height: 1vmin;
+      border-radius: 50%;
+      background: #fff;
+      opacity: .9;
+      filter: blur(.4px);
+      z-index: 6;
+      pointer-events: none;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      0%   { transform: translateY(0) translateX(0); }
+      100% { transform: translateY(118vh) translateX(var(--dx)); opacity: .4; }
+    }
+
+    /* ============ 祝福语气泡 ============ */
+    .blessing {
+      position: fixed;
+      padding: 1.2vmin 3.4vmin;
+      border: 1px solid rgba(255, 255, 255, .35);
+      background: rgba(255, 255, 255, .08);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      border-radius: 999px;
+      color: #ffe9a8;
+      font-size: 3.4vmin;
+      letter-spacing: .12em;
+      white-space: nowrap;
+      text-shadow: 0 0 10px rgba(255, 214, 110, .5);
+      z-index: 4;
+      pointer-events: none;
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(0) translateX(0) scale(.9); opacity: 0; }
+      8%   { opacity: 1; }
+      100% { transform: translateY(-128vh) translateX(var(--dx)) scale(1.06); opacity: 0; }
+    }
+
+    /* 底部提示 */
+    .hint {
+      position: fixed;
+      bottom: 3vmin;
+      width: 100%;
+      text-align: center;
+      font-size: 3.2vmin;
+      color: rgba(255, 255, 255, .75);
+      letter-spacing: .2em;
+      z-index: 5;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title">🎄 圣诞快乐 🎄<span class="sub">MERRY CHRISTMAS</span></div>
+
+  <div class="ground"></div>
+  <div class="star">⭐</div>
+  <div class="layer l1"></div>
+  <div class="layer l2"></div>
+  <div class="layer l3"></div>
+  <div class="layer l4"></div>
+  <div class="trunk"></div>
+
+  <div class="hint">✨ 轻点屏幕，送出祝福 ✨</div>
+
+  <script>
+    // ============ 祝福语列表（想改字就改这里） ============
+    const BLESSINGS = [
+      '圣诞快乐', 'Merry Christmas', '平安喜乐', '万事胜意',
+      '阖家幸福', '心想事成', '岁岁平安', '好运连连',
+      '前程似锦', '幸福安康', '喜乐安康', '如意吉祥'
+    ];
+
+    const ORN_COLORS = ['#ff4d6b', '#ffd166', '#4dd0ff', '#ff8fd0',
+                        '#8dff9a', '#ffb347', '#ffffff', '#c77dff'];
+
+    // ============ 装饰球：撒在每一层三角形里 ============
+    // 每层：bottom=距屏幕底部, height=层高, width=层宽（半宽 = width/2）
+    const LAYERS = [
+      { bottom: 9,  height: 30, width: 56 },
+      { bottom: 26, height: 28, width: 46 },
+      { bottom: 42, height: 26, width: 36 },
+      { bottom: 58, height: 24, width: 25 }
+    ];
+
+    function makeOrnaments() {
+      LAYERS.forEach(layer => {
+        const count = Math.floor(layer.width / 4);   // 越宽的层挂越多灯
+        for (let i = 0; i < count; i++) {
+          const o = document.createElement('div');
+          o.className = 'ornament';
+
+          // t 越接近 1 越靠下（三角形越宽）
+          const t = 0.15 + Math.random() * 0.7;
+          const halfW = (layer.width / 2) * t;       // 该高度处半宽
+          const dx = (Math.random() * 2 - 1) * halfW * 0.75; // 水平偏移
+
+          const color = ORN_COLORS[Math.floor(Math.random() * ORN_COLORS.length)];
+          o.style.left = `calc(50vw + ${dx.toFixed(2)}vmin)`;
+          o.style.bottom = `${(layer.bottom + t * layer.height).toFixed(2)}vmin`;
+          o.style.background = color;
+          o.style.color = color;                     // 供 box-shadow 的 currentColor 发光
+          o.style.animationDelay = `${(Math.random() * 1.6).toFixed(2)}s`;
+          o.style.animationDuration = `${(0.9 + Math.random() * 1.2).toFixed(2)}s`;
+          document.body.appendChild(o);
+        }
+      });
+    }
+
+    // ============ 背景星星 ============
+    function makeBgStars() {
+      for (let i = 0; i < 40; i++) {
+        const s = document.createElement('div');
+        s.className = 'bgstar';
+        s.style.left = `${(Math.random() * 100).toFixed(2)}vw`;
+        s.style.top = `${(Math.random() * 70).toFixed(2)}vh`;
+        s.style.animationDelay = `${(Math.random() * 2.4).toFixed(2)}s`;
+        document.body.appendChild(s);
+      }
+    }
+
+    // ============ 雪花 ============
+    function makeSnow() {
+      for (let i = 0; i < 60; i++) {
+        const s = document.createElement('div');
+        s.className = 'snow';
+        const size = 0.5 + Math.random() * 1.2;
+        s.style.width = `${size.toFixed(2)}vmin`;
+        s.style.height = `${size.toFixed(2)}vmin`;
+        s.style.left = `${(Math.random() * 100).toFixed(2)}vw`;
+        s.style.setProperty('--dx', `${(Math.random() * 8 - 4).toFixed(2)}vw`);
+        s.style.animationDuration = `${(6 + Math.random() * 8).toFixed(2)}s`;
+        s.style.animationDelay = `${(-Math.random() * 14).toFixed(2)}s`;
+        document.body.appendChild(s);
+      }
+    }
+
+    // ============ 祝福语气泡（循环上浮） ============
+    function makeBlessing(left, bottom, duration) {
+      const b = document.createElement('div');
+      b.className = 'blessing';
+      b.textContent = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
+      b.style.left = left;
+      b.style.bottom = bottom;
+      b.style.setProperty('--dx', `${(Math.random() * 12 - 6).toFixed(2)}vw`);
+      b.style.animationDuration = duration;
+      b.style.animationDelay = `${(-Math.random() * 14).toFixed(2)}s`;
+      document.body.appendChild(b);
+      return b;
+    }
+
+    function seedBlessings() {
+      for (let i = 0; i < 14; i++) {
+        makeBlessing(
+          `${(Math.random() * 90 + 5).toFixed(2)}vw`,
+          `${(-Math.random() * 20).toFixed(2)}vh`,
+          `${(9 + Math.random() * 7).toFixed(2)}s`
+        );
+      }
+    }
+
+    // ============ 点击屏幕：从点击处飘出一个祝福 ============
+    document.addEventListener('pointerdown', (e) => {
+      const b = document.createElement('div');
+      b.className = 'blessing';
+      b.textContent = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
+      b.style.left = `${e.clientX}px`;
+      b.style.top = `${e.clientY}px`;
+      b.style.bottom = 'auto';
+      b.style.setProperty('--dx', `${(Math.random() * 10 - 5).toFixed(2)}vw`);
+      b.style.animation = 'floatUp 4.5s ease-out forwards';
+      b.style.fontSize = '5vmin';
+      b.addEventListener('animationend', () => b.remove());
+      document.body.appendChild(b);
+    });
+
+    // ============ 启动 ============
+    makeOrnaments();
+    makeBgStars();
+    makeSnow();
+    seedBlessings();
+  </script>
+</body>
+</html>
