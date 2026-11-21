@@ -146,6 +146,24 @@
       pointer-events: none;
       animation: starGlowPulse 2s ease-in-out infinite;
     }
+    .rays {
+      position: fixed;
+      left: 50vw;
+      bottom: 77.5vmin;
+      transform: translateX(-50%);
+      width: 24vmin;
+      height: 24vmin;
+      background: repeating-conic-gradient(from 0deg, rgba(255, 224, 120, .9) 0deg 7deg, rgba(255, 224, 120, 0) 7deg 15deg);
+      -webkit-mask-image: radial-gradient(circle, transparent 0 24%, #000 26% 50%, transparent 55% 100%);
+      mask-image: radial-gradient(circle, transparent 0 24%, #000 26% 50%, transparent 55% 100%);
+      filter: blur(.6px);
+      animation: spin 8s linear infinite;
+      z-index: 3;
+      pointer-events: none;
+    }
+    @keyframes spin {
+      to { transform: translateX(-50%) rotate(360deg); }
+    }
     .star {
       position: fixed;
       left: 50vw;
@@ -280,6 +298,39 @@
       100% { transform: translateY(-128vh) translateX(var(--dx)) scale(1.06); opacity: 0; }
     }
 
+    /* ============ 音乐按钮 ============ */
+    .music-btn {
+      position: fixed;
+      top: 3vmin;
+      left: 3vmin;
+      width: 11vmin;
+      height: 11vmin;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .4);
+      background: rgba(255, 255, 255, .1);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      font-size: 5.5vmin;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 8;
+      box-shadow: 0 0 12px rgba(255, 255, 255, .25);
+      transition: transform .15s ease, background .2s ease;
+    }
+    .music-btn:active { transform: scale(.9); }
+    .music-btn.on {
+      background: rgba(255, 214, 110, .2);
+      border-color: rgba(255, 214, 110, .75);
+      animation: musicPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes musicPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(255, 214, 110, .35); }
+      50%      { box-shadow: 0 0 26px rgba(255, 214, 110, .8); }
+    }
+
     /* 底部提示 */
     .hint {
       position: fixed;
@@ -298,12 +349,15 @@
 
   <div class="moon"></div>
 
+  <button class="music-btn" id="musicBtn" aria-label="播放音乐">🎵</button>
+
   <div class="title">🎄 圣诞快乐 🎄<span class="sub">MERRY CHRISTMAS</span></div>
 
   <div class="glow"></div>
   <div class="ground"></div>
 
   <div class="starglow"></div>
+  <div class="rays"></div>
   <svg class="star" viewBox="0 0 24 24" aria-hidden="true">
     <defs>
       <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
@@ -447,6 +501,7 @@
 
     // ============ 点击屏幕：从点击处飘出一个祝福 ============
     document.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.music-btn')) return;
       const b = document.createElement('div');
       b.className = 'blessing';
       b.textContent = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
@@ -458,6 +513,75 @@
       b.style.fontSize = '5vmin';
       b.addEventListener('animationend', () => b.remove());
       document.body.appendChild(b);
+    });
+
+    // ============ 背景音乐（Web Audio 合成《铃儿响叮当》，无需外部文件） ============
+    const NOTE = {
+      C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00,
+      A4: 440.00, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25,
+      F5: 698.46, G5: 783.99, A5: 880.00
+    };
+    // [音名, 拍数] —— 《铃儿响叮当》副歌
+    const MELODY = [
+      ['E5',1],['E5',1],['E5',2],
+      ['E5',1],['E5',1],['E5',2],
+      ['E5',1],['G5',1],['C5',1.5],['D5',0.5],['E5',4],
+      ['F5',1],['F5',1],['F5',1],['F5',0.5],['F5',0.5],
+      ['F5',1],['E5',1],['E5',1],['E5',0.5],['E5',0.5],
+      ['E5',1],['D5',1],['D5',1],['E5',1],['D5',2],['G5',2]
+    ];
+
+    let audioCtx = null, isPlaying = false, noteIndex = 0, nextNoteTime = 0, timerId = null;
+    const BPM = 152, BEAT = 60 / BPM;
+
+    function scheduleNote(i, t) {
+      const [name, dur] = MELODY[i];
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = NOTE[name];
+      const start = t, end = t + dur * BEAT;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(end + 0.02);
+    }
+
+    function tick() {
+      while (nextNoteTime < audioCtx.currentTime + 0.3) {
+        scheduleNote(noteIndex, nextNoteTime);
+        nextNoteTime += MELODY[noteIndex][1] * BEAT;
+        noteIndex = (noteIndex + 1) % MELODY.length;
+      }
+    }
+
+    function startMusic() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      nextNoteTime = audioCtx.currentTime + 0.05;
+      noteIndex = 0;
+      timerId = setInterval(tick, 30);
+      isPlaying = true;
+    }
+    function stopMusic() {
+      clearInterval(timerId);
+      isPlaying = false;
+    }
+
+    const musicBtn = document.getElementById('musicBtn');
+    musicBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isPlaying) {
+        stopMusic();
+        musicBtn.classList.remove('on');
+        musicBtn.textContent = '🎵';
+      } else {
+        startMusic();
+        musicBtn.classList.add('on');
+        musicBtn.textContent = '🎶';
+      }
     });
 
     // ============ 启动 ============
